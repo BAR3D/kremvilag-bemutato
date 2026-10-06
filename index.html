@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Krémvilág</title>
+<meta name="description" content="Professzionális kozmetikumok otthoni használatra: Alissi Brontë, Skeyndor, Kleanthous. Bőrtípus szerinti választás, ingyenes szaktanácsadás, ingyenes szállítás 30 000 Ft felett.">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#1a1014">
+<link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=2">
+</head>
+<body>
+<!-- Mozgó háttér: videók + krémfoltok + csillámpor (az egész oldal mögött) -->
+<div class="bg" aria-hidden="true">
+  <div class="bg-media" id="bgMedia"></div>
+  <div class="bg-blob b1"></div><div class="bg-blob b2"></div><div class="bg-blob b3"></div>
+  <canvas id="sparkle"></canvas>
+  <div class="bg-shade"></div>
+</div>
+
+<header class="nav" id="nav">
+  <a class="brand" href="#/"><span class="brand-mark"></span>Krémvilág</a>
+  <nav class="nav-links" id="navLinks">
+    <a href="#/termekek">Termékek</a>
+    <a href="#/borom">Bőrtípusom</a>
+    <a href="#/markak">Márkák</a>
+    <a href="#/blog">Blog</a>
+    <a href="#/kapcsolat">Kapcsolat</a>
+  </nav>
+  <div class="nav-actions">
+    <button class="icon-btn" id="searchBtn" aria-label="Keresés"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
+    <button class="cart-btn" id="cartBtn" aria-label="Kosár"><svg viewBox="0 0 24 24"><path d="M5 8h14l-1.2 11.2a2 2 0 0 1-2 1.8H8.2a2 2 0 0 1-2-1.8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg><span id="cartCount">0</span></button>
+    <button class="icon-btn menu-btn" id="menuBtn" aria-label="Menü"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+  </div>
+</header>
+
+<main id="app"></main>
+
+<footer class="foot">
+  <div class="foot-grid">
+    <div>
+      <a class="brand" href="#/"><span class="brand-mark"></span>Krémvilág</a>
+      <p class="muted">Professzionális kozmetikumok otthonra — szalonminőség, szaktanácsadással.</p>
+    </div>
+    <div>
+      <h4>Vásárlás</h4>
+      <a href="#/termekek">Összes termék</a><a href="#/borom">Bőrtípus-választó</a><a href="#/markak">Márkák</a><a href="#/blog">Blog</a>
+    </div>
+    <div>
+      <h4>Információ</h4>
+      <a href="#/oldal/szallitasi-feltetelek">Szállítási feltételek</a><a href="#/oldal/altalanos-szerzodesi-feltetelek">ÁSZF</a><a href="#/oldal/adatvedelmi-nyilatkozat">Adatvédelem</a><a href="#/oldal/cookie-policy">Sütik</a>
+    </div>
+    <div>
+      <h4>Kapcsolat</h4>
+      <a href="tel:+36309661111">+36 30/966-11-11</a><a href="mailto:rendeles@kremvilag.hu">rendeles@kremvilag.hu</a><span class="muted">1132 Budapest, Visegrádi utca 17</span><span class="muted">H–P 8:00–19:00</span>
+    </div>
+  </div>
+  <p class="copy">© All About Beauty Kft. — Krémvilág</p>
+</footer>
+
+<!-- Kosár-fiók -->
+<aside class="drawer" id="drawer" aria-hidden="true">
+  <div class="drawer-panel">
+    <div class="drawer-head"><h3>Kosarad</h3><button class="icon-btn" id="drawerClose" aria-label="Bezárás"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+    <div class="ship-meter" id="shipMeter"></div>
+    <div class="drawer-items" id="drawerItems"></div>
+    <div class="drawer-foot" id="drawerFoot"></div>
+  </div>
+</aside>
+
+<!-- Keresés -->
+<div class="search" id="search" aria-hidden="true">
+  <div class="search-box">
+    <input id="searchInput" type="search" placeholder="Keress terméket, márkát, bőrproblémát…" autocomplete="off">
+    <div class="search-results" id="searchResults"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<button class="update-btn" id="updateBtn" hidden>Új verzió — Frissítés</button>
+
+<script src="app.js?v=2"></script>
+</body>
+</html>
