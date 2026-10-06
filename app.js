@@ -1,6 +1,6 @@
 /* Krémvilág – egyoldalas bemutató webshop (hash-útvonalak, kosár a böngészőben) */
 'use strict';
-const VERSION = '2';
+const VERSION = '3';
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const app = $('#app');
@@ -109,15 +109,137 @@ $('#searchInput').oninput = e => {
 };
 window.addEventListener('hashchange', () => searchOpen(false));
 
-/* ---------- 3D néző (viewer3d.mjs, igény szerint töltve) ---------- */
-let viewers = [];
-const v3dLib = () => (v3dLib.p ||= import('./viewer3d.mjs'));
-function mount3d(el, p, opts) {
-  if (!el || !p?.shape) return;
-  v3dLib().then(m => { if (el.isConnected) viewers.push(m.mount(el, p, opts)); }).catch(() => el.classList.add('no3d'));
+/* ---------- körhinta: a kínálat körben tekerhető, a középső termék kiemelve ---------- */
+let rings = [];
+function ring(el, opts = {}) {
+  const VIS = 5, STEP = 24;                          // ±5 kártya látszik, 24°-onként a körön
+  el.innerHTML = `<div class="ring">
+    <div class="ring-view" tabindex="0" aria-label="Termékkörhinta – húzd vagy használd a nyilakat">
+      <div class="ring-stage"></div>
+      <button class="ring-nav prev" aria-label="Előző">‹</button><button class="ring-nav next" aria-label="Következő">›</button>
+    </div>
+    <div class="ring-info"></div>
+    <div class="ring-scrub"><span class="ring-pos"></span><input type="range" min="0" max="0" value="0" aria-label="Ugrás a listában"></div>
+  </div>`;
+  const view = $('.ring-view', el), stage = $('.ring-stage', el), info = $('.ring-info', el), scrub = $('.ring-scrub input', el), pos = $('.ring-pos', el);
+  const nodes = Array.from({ length: VIS * 2 + 3 }, () => {
+    const n = document.createElement('div'); n.className = 'ring-card';
+    n.innerHTML = '<div class="rc-img"><img alt="" draggable="false"></div><div class="rc-t"><span class="rc-b"></span><span class="rc-n"></span><b class="rc-p"></b></div>';
+    stage.appendChild(n); return n;
+  });
+  let items = [], p = 0, target = 0, vel = 0, drag = null, raf = 0, shown = -1, idleAt = performance.now(), W = 200, R = 500;
+  const wrap = i => ((i % items.length) + items.length) % items.length;
+  const measure = () => {
+    W = Math.round(Math.max(140, Math.min(230, el.clientWidth * (innerWidth < 700 ? 0.42 : 0.25))));
+    R = Math.round(W / 2 / Math.tan(STEP / 2 * Math.PI / 180) * 1.18);
+    el.style.setProperty('--rw', W + 'px');
+    stage.style.transform = `translateZ(${-R}px) rotateX(-4deg)`;
+  };
+  const showInfo = i => {
+    const it = items[i]; if (!it) return;
+    info.innerHTML = `<div class="ri-main"><span class="card-brand">${esc(it.brand)}</span><h3>${esc(it.name)}</h3>
+      <span class="stock ${it.inStock ? 'ok' : 'no'}">${it.inStock ? '● Raktáron' : '● Jelenleg elfogyott'}</span></div>
+      <div class="ri-buy"><span class="price">${ft(it.price)}</span>
+        ${it.inStock ? `<button class="btn btn-gold" data-add="${it.id}">Kosárba</button>` : ''}
+        <a class="btn btn-ghost" href="#/termek/${it.slug}">Részletek</a></div>`;
+    pos.textContent = `${i + 1} / ${items.length}`;
+    scrub.value = i;
+  };
+  const frame = now => {
+    raf = 0;
+    if (!el.isConnected) return;
+    if (!drag) {
+      if (opts.auto && now - idleAt > 5000) { target += 1; idleAt = now - 1500; }
+      p += (target - p) * 0.14;
+      if (Math.abs(target - p) < 0.001) p = target;
+    }
+    const base = Math.round(p);
+    nodes.forEach((n, k) => {
+      const abs = base + k - VIS - 1, d = abs - p, ang = d * STEP;
+      const on = items.length && Math.abs(ang) < 112 && (items.length > VIS * 2 || Math.abs(abs - base) <= Math.floor((items.length - 1) / 2));
+      n.style.visibility = on ? 'visible' : 'hidden';
+      if (!on) return;
+      const i = wrap(abs);
+      if (n._i !== i) {
+        n._i = i; const it = items[i];
+        n.querySelector('img').src = pimg(it);
+        n.querySelector('.rc-b').textContent = it.brand;
+        n.querySelector('.rc-n').textContent = it.name;
+        n.querySelector('.rc-p').textContent = ft(it.price);
+        n.classList.toggle('out', !it.inStock);
+      }
+      n._abs = abs;
+      const f = Math.max(0, 1 - Math.abs(d) / (VIS + .5));
+      n.style.transform = `rotateY(${ang}deg) translateZ(${R}px) scale(${0.86 + 0.14 * Math.max(0, 1 - Math.abs(d))})`;
+      n.style.opacity = (0.25 + 0.75 * f).toFixed(3);
+      n.style.zIndex = 100 - Math.round(Math.abs(d) * 10);
+      n.classList.toggle('front', Math.abs(d) < 0.5);
+    });
+    const cur = items.length ? wrap(base) : -1;
+    if (cur !== shown) { shown = cur; if (cur >= 0) showInfo(cur); }
+    if (drag || Math.abs(target - p) > 0.0005 || opts.auto) raf = requestAnimationFrame(frame);
+  };
+  const kick = () => { if (!raf) raf = requestAnimationFrame(frame); };
+  const go = t => { target = t; idleAt = performance.now(); kick(); };
+
+  // húzás tehetetlenséggel; a kártyára kattintás oda teker, a középsőre kattintás megnyitja
+  view.addEventListener('pointerdown', e => {
+    if (e.target.closest('.ring-nav')) return;
+    drag = { x: e.clientX, p0: p, t: performance.now(), moved: 0, lastX: e.clientX, lastT: performance.now() };
+    view.setPointerCapture(e.pointerId); view.classList.add('grabbing'); kick();
+  });
+  view.addEventListener('pointermove', e => {
+    if (!drag) return;
+    const now = performance.now();
+    vel = (e.clientX - drag.lastX) / Math.max(1, now - drag.lastT);
+    drag.lastX = e.clientX; drag.lastT = now;
+    drag.moved = Math.max(drag.moved, Math.abs(e.clientX - drag.x));
+    p = drag.p0 - (e.clientX - drag.x) / (W * 0.95); target = p;
+  });
+  const end = e => {
+    if (!drag) return;
+    const moved = drag.moved; drag = null; view.classList.remove('grabbing');
+    if (moved < 6) {                                   // kattintás
+      const c = document.elementFromPoint(e.clientX, e.clientY)?.closest('.ring-card');
+      if (c && c._abs !== undefined) {
+        if (c.classList.contains('front')) location.hash = '#/termek/' + items[c._i].slug;
+        else go(c._abs);
+      } else go(Math.round(p));
+      return;
+    }
+    go(Math.round(p - vel * 9));                       // lendület után a legközelebbi kártyára áll
+  };
+  view.addEventListener('pointerup', end);
+  view.addEventListener('pointercancel', end);
+  view.addEventListener('wheel', e => {
+    const dx = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : (e.shiftKey ? e.deltaY : 0);
+    if (!dx) return;                                   // függőleges görgetés: az oldal görög tovább
+    e.preventDefault(); go(Math.round(target + Math.sign(dx)));
+  }, { passive: false });
+  view.addEventListener('keydown', e => {
+    if (e.key === 'ArrowLeft') { e.preventDefault(); go(Math.round(target) - 1); }
+    if (e.key === 'ArrowRight') { e.preventDefault(); go(Math.round(target) + 1); }
+    if (e.key === 'Enter' && items.length) location.hash = '#/termek/' + items[wrap(Math.round(p))].slug;
+  });
+  $('.prev', el).onclick = () => go(Math.round(target) - 1);
+  $('.next', el).onclick = () => go(Math.round(target) + 1);
+  scrub.oninput = () => { const b = Math.round(target); go(b + (+scrub.value - wrap(b))); };
+  const ro = new ResizeObserver(() => { measure(); kick(); }); ro.observe(el);
+  measure();
+  const api = {
+    set(list) {
+      items = list; shown = -1; nodes.forEach(n => n._i = -1);
+      p = target = 0; scrub.max = Math.max(0, list.length - 1);
+      el.classList.toggle('empty-ring', !list.length);
+      if (!list.length) { info.innerHTML = '<div class="ri-main"><h3>Nincs ilyen termék</h3><span class="muted">Próbálj kevesebb szűrőt.</span></div>'; pos.textContent = ''; }
+      kick();
+    },
+    dispose() { cancelAnimationFrame(raf); ro.disconnect(); },
+  };
+  rings.push(api);
+  return api;
 }
-function disposeViewers() { viewers.forEach(v => v.dispose()); viewers = []; }
-const hint3d = '<span class="v3d-hint">↔ Húzd el a forgatáshoz</span><span class="v3d-load">3D betöltése…</span>';
+function disposeRings() { rings.forEach(r => r.dispose()); rings = []; }
 
 /* ---------- komponensek ---------- */
 const card = p => `
@@ -138,9 +260,7 @@ const head = (num, title, sub, more) => `
 function home() {
   const P = S.products;
   const fresh = P.filter(p => p.brand === 'Alissi Brontë').slice(0, 12);
-  const show = ['alissi-bronte-purissimo-cream-50-ml', 'alissi-bronte-perfect-tone-feherito-szerum-30-ml', 'alissi-bronte-tensine-in-up-krem-50-ml', 'alissi-bronte-diamond-peel-100-ml', 'alissi-bronte-serenity-orchid-szerum-erzekeny-borre-30-ml']
-    .map(bySlug).filter(p => p && p.shape);
-  setTimeout(() => showcase(show));
+  setTimeout(homeRing);
   const bestSkeyndor = P.filter(p => p.brand === 'Skeyndor' && p.inStock).slice(0, 8);
   const posts = S.posts.slice(0, 3);
   const skinN = s => P.filter(p => has(p, s.cats)).length;
@@ -180,11 +300,14 @@ function home() {
   </section>
 
   <section class="sec wrap">
-    ${head('02', 'Újdonságok', 'Friss érkezés az Alissi Brontë laboratóriumából — forgasd körbe!', '<a class="link-more" href="#/termekek?marka=alissi">Mind →</a>')}
-    ${show.length ? `<div class="showcase glass rv">
-      <div class="v3d" id="home3d">${hint3d}</div>
-      <div class="sc-info" id="scInfo"></div>
-    </div>` : ''}
+    ${head('02', 'A teljes kínálat', 'Tekerd körbe mind a ' + P.length + ' terméket — húzással, a nyilakkal vagy a csúszkával. Válogass márkára vagy bőrtípusra.', '<a class="link-more" href="#/termekek">Webshop →</a>')}
+    <div class="chips ring-filter rv" id="hrFilter">
+      <button class="chip on" data-k="">Minden termék</button>
+      ${BRANDS.map(b => `<button class="chip" data-k="m:${b.k}">${b.name}</button>`).join('')}
+      ${SKINS.map(x => `<button class="chip" data-k="b:${x.k}">${x.name}</button>`).join('')}
+    </div>
+    <div id="homeRing"></div>
+    <h3 class="sub-h rv">Újdonságok</h3>
     <div class="rail rv">${fresh.map(card).join('')}</div>
   </section>
 
@@ -231,21 +354,15 @@ function home() {
     <div class="posts">${posts.map(postCard).join('')}</div>
   </section>`;
 }
-function showcase(list) {
-  const el = $('#home3d'); if (!el || !list.length) return;
-  let k = 0, viewer = null;
-  const info = () => {
-    const p = list[k];
-    $('#scInfo').innerHTML = `<span class="card-brand">${esc(p.brand)}</span><h3>${esc(p.name)}</h3>
-      <div class="prose sc-desc">${p.short || ''}</div>
-      <div class="sc-buy"><span class="price">${ft(p.price)}</span>
-        ${p.inStock ? `<button class="btn btn-gold" data-add="${p.id}">Kosárba</button>` : '<span class="stock no">● Elfogyott</span>'}
-        <a class="btn btn-ghost" href="#/termek/${p.slug}">Részletek</a></div>
-      <div class="sc-pick">${list.map((x, i) => `<button class="${i === k ? 'on' : ''}" data-k="${i}" aria-label="${esc(x.name)}"><img src="${pimg(x)}" alt=""></button>`).join('')}</div>`;
-    $$('#scInfo [data-k]').forEach(b => b.onclick = () => { k = +b.dataset.k; info(); viewer?.setProduct(list[k]); });
+function homeRing() {
+  const el = $('#homeRing'); if (!el) return;
+  const r = ring(el, { auto: true });
+  const pick = k => {
+    const [t, v] = k.split(':');
+    r.set(S.products.filter(p => !k || (t === 'm' ? brandKey(p.brand) === v : has(p, skinOf(v).cats))).sort((a, b) => b.inStock - a.inStock));
   };
-  info();
-  v3dLib().then(m => { if (el.isConnected) { viewer = m.mount(el, list[0]); viewers.push(viewer); } }).catch(() => el.classList.add('no3d'));
+  $$('#hrFilter .chip').forEach(c => c.onclick = () => { $$('#hrFilter .chip').forEach(x => x.classList.toggle('on', x === c)); pick(c.dataset.k); });
+  pick('');
 }
 const postCard = x => `<a class="post glass rv" href="#/blog/${x.slug}"><div class="ph" style="background-image:url(${x.image || 'media/szerum.jpg'})"></div>
   <div class="t"><time>${x.date.replaceAll('-', '. ')}.</time><h3>${esc(x.title)}</h3><p>${esc(x.excerpt)}</p></div></a>`;
@@ -253,7 +370,7 @@ const postCard = x => `<a class="post glass rv" href="#/blog/${x.slug}"><div cla
 function shop(params) {
   const st = {
     q: params.get('q') || '', marka: params.get('marka') || '', bor: params.get('bor') || '', tipus: params.get('tipus') || '',
-    rend: params.get('rend') || 'ajanlott', keszlet: params.get('keszlet') === '1',
+    rend: params.get('rend') || 'ajanlott', keszlet: params.get('keszlet') === '1', nezet: params.get('nezet') || 'kor',
   };
   const html = `
   <section class="page wrap">
@@ -272,12 +389,15 @@ function shop(params) {
           <input type="search" id="fQ" placeholder="Keresés a termékek között…">
           <select id="fSort"><option value="ajanlott">Ajánlott</option><option value="olcso">Ár szerint növekvő</option><option value="draga">Ár szerint csökkenő</option><option value="nev">Név szerint</option></select>
           <span class="result-n" id="fN"></span>
+          <div class="seg" role="group" aria-label="Nézet"><button data-nezet="kor">Körhinta</button><button data-nezet="racs">Rács</button></div>
         </div>
+        <div id="fRing"></div>
         <div class="grid" id="fGrid"></div>
       </div>
     </div>
   </section>`;
   setTimeout(() => {
+    const rg = ring($('#fRing'));
     $('#fQ').value = st.q; $('#fSort').value = st.rend; $('#fStock').checked = st.keszlet;
     const draw = () => {
       let r = S.products.filter(p =>
@@ -292,8 +412,12 @@ function shop(params) {
       if (st.rend === 'ajanlott') r.sort((a, b) => b.inStock - a.inStock);
       $$('.chip[data-f]').forEach(c => c.classList.toggle('on', st[c.dataset.f] === c.dataset.v));
       $('#fN').textContent = r.length + ' termék';
-      $('#fGrid').innerHTML = r.length ? r.map(card).join('') : `<div class="empty glass" style="grid-column:1/-1"><p>Nincs ilyen termék. Próbálj kevesebb szűrőt.</p></div>`;
-      const qs = new URLSearchParams(Object.entries(st).filter(([k, v]) => v && !(k === 'rend' && v === 'ajanlott')).map(([k, v]) => [k, v === true ? '1' : v])).toString();
+      const kor = st.nezet !== 'racs';
+      $('#fRing').hidden = !kor; $('#fGrid').hidden = kor;
+      $$('.seg button').forEach(b => b.classList.toggle('on', b.dataset.nezet === (kor ? 'kor' : 'racs')));
+      if (kor) rg.set(r);
+      else $('#fGrid').innerHTML = r.length ? r.map(card).join('') : `<div class="empty glass" style="grid-column:1/-1"><p>Nincs ilyen termék. Próbálj kevesebb szűrőt.</p></div>`;
+      const qs = new URLSearchParams(Object.entries(st).filter(([k, v]) => v && !(k === 'rend' && v === 'ajanlott') && !(k === 'nezet' && v === 'kor')).map(([k, v]) => [k, v === true ? '1' : v])).toString();
       history.replaceState(null, '', '#/termekek' + (qs ? '?' + qs : ''));
     };
     $$('.chip[data-f]').forEach(c => c.onclick = () => { st[c.dataset.f] = st[c.dataset.f] === c.dataset.v ? '' : c.dataset.v; draw(); });
@@ -302,6 +426,7 @@ function shop(params) {
     $('#fStock').onchange = e => { st.keszlet = e.target.checked; draw(); };
     $('#fReset').onclick = () => { Object.assign(st, { q: '', marka: '', bor: '', tipus: '', keszlet: false }); $('#fQ').value = ''; $('#fStock').checked = false; draw(); };
     $('#fToggle').onclick = () => $('#filters').classList.toggle('open');
+    $$('.seg button').forEach(b => b.onclick = () => { st.nezet = b.dataset.nezet; draw(); });
     draw();
   });
   return html;
@@ -314,27 +439,15 @@ function product(slug) {
   const rel = S.products.filter(x => x.id !== p.id && x.brand === p.brand && x.cats.some(c => p.cats.includes(c))).slice(0, 8);
   setTimeout(() => {
     let n = 1;
-    mount3d($('#pd3d'), p);
-    $$('.thumbs button').forEach(b => b.onclick = () => {
-      const main = $('.gallery .main');
-      if (b.dataset.mode === '3d') main.classList.add('is3d');
-      else { main.classList.remove('is3d'); main.querySelector('img').src = b.dataset.src; }
-      $$('.thumbs button').forEach(x => x.classList.toggle('on', x === b));
-    });
+    $$('.thumbs button').forEach(b => b.onclick = () => { $('.gallery .main img').src = b.dataset.src; $$('.thumbs button').forEach(x => x.classList.toggle('on', x === b)); });
     $$('.qty button').forEach(b => b.onclick = () => { n = Math.max(1, n + +b.dataset.d); $('.qty span').textContent = n; $('#buyBtn').dataset.n = n; });
   });
   return `
   <section class="page wrap">
     <div class="pd">
       <div class="gallery rv">
-        <div class="main ${p.shape ? 'is3d' : ''}">
-          ${p.shape ? `<div class="v3d" id="pd3d">${hint3d}</div>` : ''}
-          <img src="${pimg(p)}" alt="${esc(p.name)}">
-        </div>
-        ${p.shape || p.images.length > 1 ? `<div class="thumbs">
-          ${p.shape ? `<button class="on t3d" data-mode="3d"><b>3D</b></button>` : ''}
-          ${p.images.map((s, i) => `<button class="${!p.shape && !i ? 'on' : ''}" data-src="${s}"><img src="${s}" alt=""></button>`).join('')}
-        </div>` : ''}</div>
+        <div class="main"><img src="${pimg(p)}" alt="${esc(p.name)}"></div>
+        ${p.images.length > 1 ? `<div class="thumbs">${p.images.map((s, i) => `<button class="${i ? '' : 'on'}" data-src="${s}"><img src="${s}" alt=""></button>`).join('')}</div>` : ''}</div>
       <div class="rv">
         <a class="card-brand" href="#/marka/${brandKey(p.brand)}">${esc(p.brand)}</a>
         <h1>${esc(p.name)}</h1>
@@ -469,7 +582,7 @@ function route() {
   }[r] || notFound;
   if (route.last === r + '/' + (seg[1] || '') && r === 'termekek') return; // a szűrő maga írja át a címet
   route.last = r + '/' + (seg[1] || '');
-  disposeViewers();
+  disposeRings();
   app.innerHTML = view();
   drawer(false);
   $('#navLinks').classList.remove('open');

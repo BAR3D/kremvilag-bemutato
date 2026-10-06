@@ -273,36 +273,39 @@ main { min-height: 100vh; }
 .done { padding: 30px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
 .done h3 { font-size: 28px; }
 
-/* ---------- 3D néző ---------- */
-.v3d { position: relative; width: 100%; height: 100%; touch-action: pan-y; cursor: grab; }
-.v3d.grabbing { cursor: grabbing; }
-.v3d-canvas { position: absolute; inset: 0; width: 100% !important; height: 100% !important; display: block; }
-.v3d-hint { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 2; padding: 6px 14px; border-radius: 999px; background: rgba(42,26,33,.72); color: var(--cream); font-size: 13px; white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity .5s; }
-.v3d.ready .v3d-hint { opacity: 1; }
-.v3d.touched .v3d-hint { opacity: 0; }
-.v3d-load { position: absolute; inset: 0; display: grid; place-items: center; color: #8a6a62; font-size: 14px; pointer-events: none; transition: opacity .4s; }
-.v3d.ready .v3d-load { opacity: 0; }
-.gallery .main { position: relative; }
-.gallery .main .v3d { position: absolute; inset: 0; display: none; }
-.gallery .main.is3d .v3d { display: block; }
-.gallery .main.is3d > img { visibility: hidden; }
-.gallery .main .v3d.no3d { display: none; }
-.gallery .main .v3d.no3d + img { visibility: visible; }
-.thumbs .t3d { display: grid; place-items: center; color: #2a1717; background: linear-gradient(135deg, var(--gold-2), var(--gold)); }
-.thumbs .t3d b { font-family: var(--serif); font-size: 20px; }
-.showcase { display: grid; grid-template-columns: 1.1fr 1fr; margin-bottom: 18px; overflow: hidden; min-height: 460px; }
-.showcase .v3d { min-height: 460px; background: radial-gradient(circle at 50% 45%, #fff 0%, #f3e8e1 60%, #e9d8cf 100%); }
-.sc-info { padding: 36px 36px 30px; display: flex; flex-direction: column; gap: 10px; }
-.sc-info h3 { font-size: clamp(26px, 3vw, 36px); line-height: 1.12; }
-.sc-desc { font-size: 15px; display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; }
-.sc-desc p { margin: 0 0 6px; }
-.sc-buy { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
-.sc-buy .price { font-size: 30px; margin-right: 6px; }
-.sc-pick { display: flex; gap: 8px; margin-top: auto; padding-top: 14px; flex-wrap: wrap; }
-.sc-pick button { width: 58px; height: 58px; border-radius: 14px; background: #fbf4ef; padding: 5px; border: 2px solid transparent; transition: transform .2s; }
-.sc-pick button:hover { transform: translateY(-2px); }
-.sc-pick button.on { border-color: var(--gold); }
-.sc-pick img { width: 100%; height: 100%; object-fit: contain; }
+/* ---------- körhinta ---------- */
+.ring { }
+.ring-view { position: relative; height: calc(var(--rw) * 2.05); perspective: calc(var(--rw) * 7); perspective-origin: 50% 40%; overflow: hidden; cursor: grab; touch-action: pan-y; user-select: none; outline: none; border-radius: var(--r); }
+.ring-view:focus-visible { box-shadow: 0 0 0 2px var(--gold); }
+.ring-view.grabbing { cursor: grabbing; }
+.ring-view::before { content: ""; position: absolute; left: 50%; top: 52%; width: calc(var(--rw) * 3.4); height: calc(var(--rw) * .5); transform: translateX(-50%); border-radius: 50%; background: radial-gradient(closest-side, rgba(232,195,158,.22), transparent); pointer-events: none; }
+.ring-stage { position: absolute; left: 50%; top: 45%; width: 0; height: 0; transform-style: preserve-3d; }
+.ring-card { position: absolute; left: calc(var(--rw) / -2); top: calc(var(--rw) * -.66); width: var(--rw); border-radius: 18px; overflow: hidden; background: var(--glass-2); border: 1px solid var(--line); backface-visibility: hidden; transition: border-color .3s, box-shadow .3s; will-change: transform, opacity; }
+.ring-card.front { border-color: var(--gold); box-shadow: 0 24px 60px -18px rgba(0,0,0,.75), 0 0 0 1px var(--gold), 0 0 40px -6px rgba(232,195,158,.45); }
+.ring-card.out .rc-img { opacity: .55; }
+.rc-img { aspect-ratio: 1; background: radial-gradient(circle at 50% 45%, #fff, #f3e8e1 75%); display: grid; place-items: center; }
+.rc-img img { width: 80%; height: 80%; object-fit: contain; pointer-events: none; }
+.rc-t { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 3px; }
+.rc-b { font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--gold); }
+.rc-n { font-size: 13px; line-height: 1.3; color: var(--ink); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 2.6em; }
+.rc-p { font-family: var(--serif); font-weight: 400; font-size: 17px; }
+.ring-nav { position: absolute; top: 44%; z-index: 200; width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; font-size: 28px; line-height: 1; background: rgba(30,18,23,.75); border: 1px solid var(--line-2); color: var(--ink); transition: background .2s; }
+.ring-nav:hover { background: var(--gold); color: #2a1717; }
+.ring-nav.prev { left: 10px; } .ring-nav.next { right: 10px; }
+.ring-info { display: flex; justify-content: space-between; align-items: center; gap: 18px; flex-wrap: wrap; padding: 18px 22px; margin-top: 4px; background: var(--glass); border: 1px solid var(--line); border-radius: var(--r); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+.ri-main { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1 1 320px; }
+.ri-main h3 { font-size: clamp(20px, 2.4vw, 28px); line-height: 1.15; text-wrap: balance; }
+.ri-buy { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ri-buy .price { font-size: 28px; margin-right: 4px; }
+.ring-scrub { display: flex; align-items: center; gap: 14px; margin-top: 12px; }
+.ring-pos { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 14px; min-width: 70px; }
+.ring-scrub input { flex: 1; accent-color: var(--gold); }
+.empty-ring .ring-view, .empty-ring .ring-scrub { display: none; }
+.ring-filter { margin-bottom: 8px; }
+.sub-h { font-size: 30px; margin: 46px 0 16px; }
+.seg { display: inline-flex; border: 1px solid var(--line-2); border-radius: 999px; padding: 3px; }
+.seg button { padding: 7px 14px; border-radius: 999px; font-size: 14px; color: var(--ink-2); }
+.seg button.on { background: var(--gold); color: #2a1717; }
 
 /* ---------- fiók, keresés, toast ---------- */
 .drawer { position: fixed; inset: 0; z-index: 80; background: rgba(10,6,8,.55); opacity: 0; visibility: hidden; pointer-events: none; overflow: hidden; transition: opacity .3s, visibility 0s .4s; }
@@ -359,9 +362,6 @@ main { min-height: 100vh; }
   .brands, .posts { grid-template-columns: 1fr 1fr; }
   .ritual { grid-template-columns: repeat(2, 1fr); }
   .shop { grid-template-columns: 1fr; }
-  .showcase { grid-template-columns: 1fr; }
-  .showcase .v3d { min-height: 380px; }
-  .sc-info { padding: 24px; }
   .filters { position: static; max-height: none; display: none; }
   .filters.open { display: flex; }
   .filter-toggle { display: inline-flex; }
@@ -372,6 +372,10 @@ main { min-height: 100vh; }
   .nav-links { display: none; position: absolute; top: 62px; left: 0; right: 0; flex-direction: column; margin: 0; padding: 10px; border-radius: 22px; background: rgba(30,18,23,.96); border: 1px solid var(--line); }
   .nav-links.open { display: flex; }
   .menu-btn { display: grid; }
+  .ring-nav { width: 40px; height: 40px; font-size: 24px; }
+  .ring-filter { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 6px; scrollbar-width: none; }
+  .ring-filter .chip { flex: none; }
+  .ri-buy .price { font-size: 24px; }
   .bg-shade { background: linear-gradient(180deg, rgba(23,14,18,.55) 0%, rgba(23,14,18,.72) 50%, rgba(23,14,18,.9) 100%); }
   .bg-media > .on { opacity: .5; }
   .cart-btn { padding: 0 12px; }
