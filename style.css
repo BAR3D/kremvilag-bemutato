@@ -308,6 +308,10 @@ main { min-height: 100vh; }
 .seg button { padding: 7px 14px; border-radius: 999px; font-size: 14px; color: var(--ink-2); }
 .seg button.on { background: var(--gold); color: #2a1717; }
 
+/* álló/fekvő fotó sem nyújthatja meg a négyzetes képdobozt: a kép abszolút pozícióban, „contain” illesztéssel */
+.card-img, .rc-img, .gallery .main { position: relative; overflow: hidden; min-height: 0; }
+.card-img img, .rc-img img, .gallery .main img { position: absolute; inset: 0; margin: auto; width: 82%; height: 82%; max-width: 82%; max-height: 82%; object-fit: contain; }
+
 /* ---------- fiók, keresés, toast ---------- */
 .drawer { position: fixed; inset: 0; z-index: 80; background: rgba(10,6,8,.55); opacity: 0; visibility: hidden; pointer-events: none; overflow: hidden; transition: opacity .3s, visibility 0s .4s; }
 .drawer.open { opacity: 1; visibility: visible; pointer-events: auto; transition: opacity .3s; }

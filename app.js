@@ -1,6 +1,6 @@
 /* Krémvilág – egyoldalas bemutató webshop (hash-útvonalak, kosár a böngészőben) */
 'use strict';
-const VERSION = '4';
+const VERSION = '5';
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const app = $('#app');
