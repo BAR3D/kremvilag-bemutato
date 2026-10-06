@@ -1,6 +1,6 @@
 /* Krémvilág – egyoldalas bemutató webshop (hash-útvonalak, kosár a böngészőben) */
 'use strict';
-const VERSION = '3';
+const VERSION = '4';
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const app = $('#app');
@@ -170,7 +170,7 @@ function ring(el, opts = {}) {
       }
       n._abs = abs;
       const f = Math.max(0, 1 - Math.abs(d) / (VIS + .5));
-      n.style.transform = `rotateY(${ang}deg) translateZ(${R}px) scale(${0.86 + 0.14 * Math.max(0, 1 - Math.abs(d))})`;
+      n.style.transform = `rotateY(${ang}deg) translateZ(${R}px)`;
       n.style.opacity = (0.25 + 0.75 * f).toFixed(3);
       n.style.zIndex = 100 - Math.round(Math.abs(d) * 10);
       n.classList.toggle('front', Math.abs(d) < 0.5);
@@ -230,6 +230,7 @@ function ring(el, opts = {}) {
     set(list) {
       items = list; shown = -1; nodes.forEach(n => n._i = -1);
       p = target = 0; scrub.max = Math.max(0, list.length - 1);
+      el.classList.toggle('few', list.length < 15);
       el.classList.toggle('empty-ring', !list.length);
       if (!list.length) { info.innerHTML = '<div class="ri-main"><h3>Nincs ilyen termék</h3><span class="muted">Próbálj kevesebb szűrőt.</span></div>'; pos.textContent = ''; }
       kick();
@@ -260,7 +261,7 @@ const head = (num, title, sub, more) => `
 function home() {
   const P = S.products;
   const fresh = P.filter(p => p.brand === 'Alissi Brontë').slice(0, 12);
-  setTimeout(homeRing);
+  setTimeout(() => { homeRing(); $$('.ring-slot[data-list]').forEach(el => ring(el, { auto: true }).set(el.dataset.list === 'fresh' ? fresh : bestSkeyndor)); });
   const bestSkeyndor = P.filter(p => p.brand === 'Skeyndor' && p.inStock).slice(0, 8);
   const posts = S.posts.slice(0, 3);
   const skinN = s => P.filter(p => has(p, s.cats)).length;
@@ -308,7 +309,7 @@ function home() {
     </div>
     <div id="homeRing"></div>
     <h3 class="sub-h rv">Újdonságok</h3>
-    <div class="rail rv">${fresh.map(card).join('')}</div>
+    <div class="ring-slot" data-list="fresh"></div>
   </section>
 
   <section class="sec wrap">
@@ -331,7 +332,7 @@ function home() {
 
   <section class="sec wrap">
     ${head('05', 'Skeyndor kedvencek', 'Tudományos bőrápolás, ahogy a szalonokban.', '<a class="link-more" href="#/marka/skeyndor">Mind →</a>')}
-    <div class="rail rv">${bestSkeyndor.map(card).join('')}</div>
+    <div class="ring-slot" data-list="skeyndor"></div>
   </section>
 
   <section class="sec wrap">
@@ -439,6 +440,7 @@ function product(slug) {
   const rel = S.products.filter(x => x.id !== p.id && x.brand === p.brand && x.cats.some(c => p.cats.includes(c))).slice(0, 8);
   setTimeout(() => {
     let n = 1;
+    if ($('#relRing')) ring($('#relRing'), { auto: true }).set(rel);
     $$('.thumbs button').forEach(b => b.onclick = () => { $('.gallery .main img').src = b.dataset.src; $$('.thumbs button').forEach(x => x.classList.toggle('on', x === b)); });
     $$('.qty button').forEach(b => b.onclick = () => { n = Math.max(1, n + +b.dataset.d); $('.qty span').textContent = n; $('#buyBtn').dataset.n = n; });
   });
@@ -465,7 +467,7 @@ function product(slug) {
       </div>
     </div>
     ${p.desc ? `<div class="box glass prose rv"><h2 style="margin-top:0">Részletes leírás</h2>${p.desc}</div>` : ''}
-    ${rel.length ? `<div class="sec">${head('', 'Ehhez illik még', '')}<div class="rail">${rel.map(card).join('')}</div></div>` : ''}
+    ${rel.length ? `<div class="sec">${head('', 'Ehhez illik még', '')}<div class="ring-slot" id="relRing"></div></div>` : ''}
   </section>`;
 }
 

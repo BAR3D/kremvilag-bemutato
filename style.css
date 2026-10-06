@@ -275,11 +275,11 @@ main { min-height: 100vh; }
 
 /* ---------- körhinta ---------- */
 .ring { }
-.ring-view { position: relative; height: calc(var(--rw) * 2.05); perspective: calc(var(--rw) * 7); perspective-origin: 50% 40%; overflow: hidden; cursor: grab; touch-action: pan-y; user-select: none; outline: none; border-radius: var(--r); }
+.ring-view { position: relative; height: calc(var(--rw) * 2.25); perspective: calc(var(--rw) * 14); perspective-origin: 50% 40%; overflow: hidden; cursor: grab; touch-action: pan-y; user-select: none; outline: none; border-radius: var(--r); }
 .ring-view:focus-visible { box-shadow: 0 0 0 2px var(--gold); }
 .ring-view.grabbing { cursor: grabbing; }
 .ring-view::before { content: ""; position: absolute; left: 50%; top: 52%; width: calc(var(--rw) * 3.4); height: calc(var(--rw) * .5); transform: translateX(-50%); border-radius: 50%; background: radial-gradient(closest-side, rgba(232,195,158,.22), transparent); pointer-events: none; }
-.ring-stage { position: absolute; left: 50%; top: 45%; width: 0; height: 0; transform-style: preserve-3d; }
+.ring-stage { position: absolute; left: 50%; top: 42%; width: 0; height: 0; transform-style: preserve-3d; }
 .ring-card { position: absolute; left: calc(var(--rw) / -2); top: calc(var(--rw) * -.66); width: var(--rw); border-radius: 18px; overflow: hidden; background: var(--glass-2); border: 1px solid var(--line); backface-visibility: hidden; transition: border-color .3s, box-shadow .3s; will-change: transform, opacity; }
 .ring-card.front { border-color: var(--gold); box-shadow: 0 24px 60px -18px rgba(0,0,0,.75), 0 0 0 1px var(--gold), 0 0 40px -6px rgba(232,195,158,.45); }
 .ring-card.out .rc-img { opacity: .55; }
@@ -300,7 +300,8 @@ main { min-height: 100vh; }
 .ring-scrub { display: flex; align-items: center; gap: 14px; margin-top: 12px; }
 .ring-pos { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 14px; min-width: 70px; }
 .ring-scrub input { flex: 1; accent-color: var(--gold); }
-.empty-ring .ring-view, .empty-ring .ring-scrub { display: none; }
+.empty-ring .ring-view, .empty-ring .ring-scrub, .few .ring-scrub { display: none; }
+.ring-slot { margin-top: 4px; }
 .ring-filter { margin-bottom: 8px; }
 .sub-h { font-size: 30px; margin: 46px 0 16px; }
 .seg { display: inline-flex; border: 1px solid var(--line-2); border-radius: 999px; padding: 3px; }
